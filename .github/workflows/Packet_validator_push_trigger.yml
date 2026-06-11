@@ -26,13 +26,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '11'
-          server-id: ossrh
-          settings-path: ${{ github.workspace }}
-
-      - name: Setup branch and env
-        run: |
-          echo "BRANCH_NAME=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
-          echo "GPG_TTY=$(tty)" >> $GITHUB_ENV
 
       - uses: actions/cache@v4
         with:
@@ -41,107 +34,51 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Setup settings file for ossrh server
-        run: |
-          cat > $GITHUB_WORKSPACE/settings.xml << 'EOF'
-          <settings>
-            <servers>
-              <server>
-                <id>ossrh</id>
-                <username>${{secrets.ossrh_user}}</username>
-                <password>${{secrets.ossrh_secret}}</password>
-              </server>
-            </servers>
-            <profiles>
-              <profile>
-                <id>mosip-repos</id>
-                <activation>
-                  <activeByDefault>true</activeByDefault>
-                </activation>
-                <properties>
-                  <gpg.executable>gpg2</gpg.executable>
-                  <gpg.passphrase>${{secrets.gpg_secret}}</gpg.passphrase>
-                </properties>
-                <repositories>
-                  <repository>
-                    <id>mosip-snapshots</id>
-                    <url>https://repo.mosip.io/snapshots</url>
-                    <releases><enabled>false</enabled></releases>
-                    <snapshots><enabled>true</enabled></snapshots>
-                  </repository>
-                  <repository>
-                    <id>mosip-releases</id>
-                    <url>https://repo.mosip.io/releases</url>
-                    <releases><enabled>true</enabled></releases>
-                    <snapshots><enabled>false</enabled></snapshots>
-                  </repository>
-                  <repository>
-                    <id>ossrh-snapshots</id>
-                    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-                    <releases><enabled>false</enabled></releases>
-                    <snapshots><enabled>true</enabled></snapshots>
-                  </repository>
-                </repositories>
-              </profile>
-            </profiles>
-          </settings>
-          EOF
+      - name: Checkout Kernel Repository
+        uses: actions/checkout@v4
+        with:
+          repository: mosip/kernel
+          ref: ${{ github.event.inputs.branch }}
+          path: kernel
 
-      - name: Build with Maven
+      - name: Build and Install Kernel
+        run: |
+          cd kernel
+          mvn -B clean install -DskipTests
+
+      - name: Build Registration Processor
         run: |
           cd registration-processor
-          mvn -B package -s $GITHUB_WORKSPACE/settings.xml -DskipTests -Dgpg.skip=true --file pom.xml
+          mvn -B clean package -DskipTests
 
       - name: Get current date
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-      - name: Ready the springboot artifacts
-        run: find . -name '*.jar' -type f -executable -exec zip release.zip {} + 2>/dev/null || true
-
-      - name: Upload the springboot jars
+      - name: Upload JAR artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release
-          path: ./release.zip
-
-      - name: Extract JAR for Docker
-        run: |
-          SERVICE_LOCATION="registration-processor/pre-processor/registration-processor-packet-validator-stage"
-          mkdir -p "./$SERVICE_LOCATION/target"
-          unzip -o release.zip "$SERVICE_LOCATION/target/*.jar" -d "./" 2>/dev/null || true
-          echo "Extracted JARs for Docker build"
+          path: registration-processor/pre-processor/registration-processor-packet-validator-stage/target/*.jar
 
       - name: Build Docker image
         run: |
-          SERVICE_NAME="registration-processor-packet-validator-stage"
-          SERVICE_LOCATION="registration-processor/pre-processor/registration-processor-packet-validator-stage"
-          cd "./$SERVICE_LOCATION"
+          cd registration-processor/pre-processor/registration-processor-packet-validator-stage
           docker build . \
             --build-arg SOURCE=mosip \
             --build-arg COMMIT_HASH=$(git rev-parse HEAD) \
             --build-arg COMMIT_ID=$(git rev-parse --short HEAD) \
             --build-arg BUILD_TIME=${{ steps.date.outputs.date }} \
-            --file Dockerfile \
-            --tag $SERVICE_NAME
+            --tag registration-processor-packet-validator-stage
 
       - name: Log into registry
         run: echo "${{ secrets.release_docker_hub }}" | docker login -u ${{ secrets.actor_docker_hub }} --password-stdin
 
-      - name: Push image
+      - name: Push Docker image
         run: |
           NAMESPACE="${{ secrets.dev_namespace_docker_hub }}"
           SERVICE_NAME="registration-processor-packet-validator-stage"
-          
-          # Determine tag
-          if [ -n "${{ github.event.inputs.docker_tag }}" ]; then
-            VERSION="${{ github.event.inputs.docker_tag }}"
-          else
-            VERSION="${{ github.event.inputs.branch }}"
-          fi
-          
+          VERSION="${{ github.event.inputs.docker_tag || github.event.inputs.branch }}"
           IMAGE_ID=$(echo "$NAMESPACE/$SERVICE_NAME" | tr '[A-Z]' '[a-z]')
-          echo "Pushing: $IMAGE_ID:$VERSION"
-          
-          docker tag $SERVICE_NAME $IMAGE_ID:$VERSION
+          docker tag registration-processor-packet-validator-stage $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
