@@ -346,29 +346,29 @@ public class MessageSenderStage extends MosipVerticleAPIManager {
 	}
 
 	private NotificationTemplateType setNotificationTemplateType(InternalRegistrationStatusDto registrationStatusDto,
-			NotificationTemplateType type) {
-		if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.LOST.getValue()))
-			type = NotificationTemplateType.LOST_UIN;
-		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.NEW.getValue()))
-			type = NotificationTemplateType.UIN_CREATED;
-		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.UPDATE.getValue())
-		|| registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.RES_UPDATE.getValue()))
-			type = NotificationTemplateType.UIN_UPDATE;
-		else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.ACTIVATED.getValue()))
-			type = NotificationTemplateType.UIN_UPDATE;
-		else if (registrationStatusDto.getRegistrationType()
-				.equalsIgnoreCase(SyncTypeDto.DEACTIVATED.getValue()))
-			type = NotificationTemplateType.UIN_UPDATE;
-		return type;
-	}
+        NotificationTemplateType type) {
 
-	private boolean isNotificationEmailsEmpty() {
-		return notificationEmails != null && notificationEmails.length() > 0;
-	}
+    if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.LOST.getValue()))
+        type = NotificationTemplateType.LOST_UIN;
 
-	private boolean isNotificationTypesEmpty() {
-		return notificationTypes == null || notificationTypes.isEmpty();
-	}
+    else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.NEW.getValue())
+            || registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_NEW.getValue()))
+        type = NotificationTemplateType.UIN_CREATED;
+
+    else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.UPDATE.getValue())
+            || registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.RES_UPDATE.getValue())
+            || registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_UPDATE.getValue()))
+        type = NotificationTemplateType.UIN_UPDATE;
+
+    else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.ACTIVATED.getValue()))
+        type = NotificationTemplateType.UIN_UPDATE;
+
+    else if (registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.DEACTIVATED.getValue())
+            || registrationStatusDto.getRegistrationType().equalsIgnoreCase(SyncTypeDto.CRVS_DEATH.getValue()))
+        type = NotificationTemplateType.UIN_UPDATE;
+
+    return type;
+}
 
 	/**
 	 * Send notification.
@@ -526,61 +526,78 @@ public class MessageSenderStage extends MosipVerticleAPIManager {
 	 * @param messageSenderDto
 	 */
 	private void setTemplateAndSubject(NotificationTemplateType templatetype, String regType,
-			MessageSenderDto messageSenderDto) {
-		switch (templatetype) {
-		case LOST_UIN:
-			messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_LOST_UIN_SMS);
-			messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_LOST_UIN_EMAIL);
-			messageSenderDto.setIdType(IdType.UIN);
-			messageSenderDto.setSubject(uinGeneratedSubject);
-			break;
-		case UIN_CREATED:
-			messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_GEN_SMS);
-			messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_GEN_EMAIL);
-			messageSenderDto.setIdType(IdType.UIN);
-			messageSenderDto.setSubject(uinGeneratedSubject);
-			break;
-		case UIN_UPDATE:
-			if (regType.equalsIgnoreCase(RegistrationType.NEW.name())) {
-				messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_SMS);
-				messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_EMAIL);
-				messageSenderDto.setIdType(IdType.UIN);
-				messageSenderDto.setSubject(uinGeneratedSubject);
-			} else if (regType.equalsIgnoreCase(RegistrationType.ACTIVATED.name())) {
-				messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_REAC_SMS);
-				messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_REAC_EMAIL);
-				messageSenderDto.setIdType(IdType.UIN);
-				messageSenderDto.setSubject(uinActivateSubject);
-			} else if (regType.equalsIgnoreCase(RegistrationType.DEACTIVATED.name())) {
-				messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_DEAC_SMS);
-				messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_DEAC_EMAIL);
-				messageSenderDto.setIdType(IdType.UIN);
-				messageSenderDto.setSubject(uinDeactivateSubject);
-			} else if (regType.equalsIgnoreCase(RegistrationType.UPDATE.name())
-			|| regType.equalsIgnoreCase(RegistrationType.RES_UPDATE.name())) {
-				messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_SMS);
-				messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_EMAIL);
-				messageSenderDto.setIdType(IdType.UIN);
-				messageSenderDto.setSubject(uinUpdatedSubject);
-			}
-			break;
-		case DUPLICATE_UIN:
-			messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_DUP_UIN_SMS);
-			messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_DUP_UIN_EMAIL);
-			messageSenderDto.setIdType(IdType.RID);
-			messageSenderDto.setSubject(duplicateUinSubject);
-			break;
-		case TECHNICAL_ISSUE:
-			messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_TEC_ISSUE_SMS);
-			messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_TEC_ISSUE_EMAIL);
-			messageSenderDto.setIdType(IdType.RID);
-			messageSenderDto.setSubject(reregisterSubject);
-			break;
-		default:
-			break;
-		}
-	}
+        MessageSenderDto messageSenderDto) {
 
+    switch (templatetype) {
+
+    case LOST_UIN:
+        messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_LOST_UIN_SMS);
+        messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_LOST_UIN_EMAIL);
+        messageSenderDto.setIdType(IdType.UIN);
+        messageSenderDto.setSubject(uinGeneratedSubject);
+        break;
+
+    case UIN_CREATED:
+        messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_GEN_SMS);
+        messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_GEN_EMAIL);
+        messageSenderDto.setIdType(IdType.UIN);
+        messageSenderDto.setSubject(uinGeneratedSubject);
+        break;
+
+    case UIN_UPDATE:
+
+        if (regType.equalsIgnoreCase(RegistrationType.NEW.name())
+                || regType.equalsIgnoreCase(RegistrationType.CRVS_NEW.name())) {
+
+            messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_SMS);
+            messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_EMAIL);
+            messageSenderDto.setIdType(IdType.UIN);
+            messageSenderDto.setSubject(uinGeneratedSubject);
+
+        } else if (regType.equalsIgnoreCase(RegistrationType.ACTIVATED.name())) {
+
+            messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_REAC_SMS);
+            messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_REAC_EMAIL);
+            messageSenderDto.setIdType(IdType.UIN);
+            messageSenderDto.setSubject(uinActivateSubject);
+
+        } else if (regType.equalsIgnoreCase(RegistrationType.DEACTIVATED.name())
+                || regType.equalsIgnoreCase(RegistrationType.CRVS_DEATH.name())) {
+
+            messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_DEAC_SMS);
+            messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_DEAC_EMAIL);
+            messageSenderDto.setIdType(IdType.UIN);
+            messageSenderDto.setSubject(uinDeactivateSubject);
+
+        } else if (regType.equalsIgnoreCase(RegistrationType.UPDATE.name())
+                || regType.equalsIgnoreCase(RegistrationType.RES_UPDATE.name())
+                || regType.equalsIgnoreCase(RegistrationType.CRVS_UPDATE.name())) {
+
+            messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_SMS);
+            messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_UIN_UPD_EMAIL);
+            messageSenderDto.setIdType(IdType.UIN);
+            messageSenderDto.setSubject(uinUpdatedSubject);
+        }
+        break;
+
+    case DUPLICATE_UIN:
+        messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_DUP_UIN_SMS);
+        messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_DUP_UIN_EMAIL);
+        messageSenderDto.setIdType(IdType.RID);
+        messageSenderDto.setSubject(duplicateUinSubject);
+        break;
+
+    case TECHNICAL_ISSUE:
+        messageSenderDto.setSmsTemplateCode(NotificationTemplateCode.RPR_TEC_ISSUE_SMS);
+        messageSenderDto.setEmailTemplateCode(NotificationTemplateCode.RPR_TEC_ISSUE_EMAIL);
+        messageSenderDto.setIdType(IdType.RID);
+        messageSenderDto.setSubject(reregisterSubject);
+        break;
+
+    default:
+        break;
+    }
+}
 	/**
 	 * Checks if is template available.
 	 *
